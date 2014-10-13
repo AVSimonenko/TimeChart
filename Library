@@ -1,0 +1,282 @@
+#include "stdafx.h"
+#include "TimeChart.h"
+#include "stdlib.h"
+#include <iostream>
+#include <string>
+
+#define _CRT_SECURE_NO_WARNINGS
+
+TimeChart::TimeChart(){ //пустой конструктор
+	real_array_size = 0;
+}
+
+TimeChart::TimeChart(const int const_state){//инициализация всей диаграммы одним состоянием ///?
+	if ((const_state != 1) && (const_state != 0) && (const_state != SignalStateNameSpace::X) && (const_state != SignalStateNameSpace::EMPTY))
+		throw std::exception("incorrect signal state");
+	for (int i = 0; i < state_array_size; ++i){
+		state_array[i].value = const_state;
+		state_array[i].duration = SignalStateNameSpace::MAX_DURATION;
+	}
+	real_array_size = state_array_size;
+}
+
+TimeChart::TimeChart(const int const_state, int duration){
+	throw std::exception("111");
+	if ((const_state != 1) && (const_state != 0) && (const_state != SignalStateNameSpace::X) && (const_state != SignalStateNameSpace::EMPTY))
+		throw std::exception("incorrect signal state");
+	if (duration <= 0)
+		throw std::exception("duration must be positive");
+	state_array[0].value = const_state;
+	state_array[0].duration = duration;
+	real_array_size = 1;
+}
+
+TimeChart::TimeChart(const char *ASCIIstring){  //в формате Х-12, 1-2, 0-3, X-2//  88 X, 45 -, 59 ;, 32 space; 44 ,
+	int state_index = 0; 
+
+	for (int i = 0; i<strlen(ASCIIstring); ++i){
+		char t = ASCIIstring[i];
+		int intt = ASCIIstring[i];
+		if ((t != 'X') && (t != '-') && (t != ';') && (t != ' ') && (t < '0') && (t>'9') && (t!=','))
+			throw (std::exception("incorect symbols in time chart definition"));
+
+		while (ASCIIstring[i] == ' ')
+			++i;
+
+		int current_state;
+		if (ASCIIstring[i] == 'X')
+			current_state = SignalStateNameSpace::X;
+		else if (ASCIIstring[i] == '0')
+			current_state = 0;
+		else if (ASCIIstring[i] == '1')
+			current_state = 1;
+		else
+			throw (std::exception("incorrect time chart definition"));
+		++i;
+
+
+		char numch[20];
+		while ((ASCIIstring[i] != '\0') && (ASCIIstring[i] != ';') && (ASCIIstring[i] != ',')){
+			if ((ASCIIstring[i] != '-') && (ASCIIstring[i] != ' ') ){
+				int num_ind = 0;
+				while ((47 < (t = ASCIIstring[i])) && ((t = ASCIIstring[i]) < 57)){
+					numch[num_ind] = ASCIIstring[i];
+					++num_ind;
+					++i;
+				}
+				numch[num_ind] = '\0';
+				if (numch != ""){
+					int state_duration = atoi(numch);
+					if (state_duration > SignalStateNameSpace::MAX_DURATION)
+						throw (std::exception("signal state duration mustn't oversize constant signal state maximum duration"));
+					if (state_index < state_array_size){
+						if (state_array[state_index - 1].value == current_state && (state_array[state_index - 1].duration + state_duration) < SignalStateNameSpace::MAX_DURATION)
+							state_array[state_index - 1].duration += state_duration;
+						else{
+							state_array[state_index].value = current_state;
+							state_array[state_index].duration = state_duration;
+							++state_index;
+						}
+					}
+					else
+						throw (std::exception("amount of signal states in defined time chart exceeds size of array"));
+				}
+				else
+					throw (std::exception("incorect time chart definition"));
+				--i;
+			}
+			++i;
+		}
+	}
+	real_array_size = state_index;
+}
+
+int TimeChart::get_real_array_size() const{
+	return real_array_size;
+}
+
+int TimeChart::get_real_duration() const{
+	int real_dur = 0;
+	for (int i = 0; i<real_array_size; ++i){
+		real_dur += state_array[i].duration;
+	}
+	return real_dur;
+}
+
+std::istream & operator >>(std::istream &input, TimeChart &time_chart){
+	
+	std::string signal_str;
+	std::getline(std::cin, signal_str);
+	std::getline(std::cin, signal_str);
+	const char *signal_char = signal_str.c_str();
+
+	try{
+		TimeChart new_time_chart(signal_char);
+		time_chart = new_time_chart;
+	}
+	catch (std::exception &e){
+		input.std::ios::setstate(std::ios::failbit, false);
+	}
+	return input;
+}
+
+std::ostream & operator <<(std::ostream &output, const TimeChart &time_chart){
+	char *time_unit = "";
+	output << "1 ";
+	for (int i = 0; i < time_chart.real_array_size; ++i){
+		if (time_chart.state_array[i].value == 1)
+			time_unit = "_.";
+		else if (time_chart.state_array[i].value == -2)
+			time_unit = "emp ";
+		else
+			time_unit = " .";
+		for (int k = 0; k < time_chart.state_array[i].duration; ++k)
+			output << time_unit;
+	}
+	output << std::endl << "0 ";
+	for (int i = 0; i < time_chart.real_array_size; ++i){
+		if (time_chart.state_array[i].value == 0)
+			time_unit = "_.";
+		else if (time_chart.state_array[i].value == -2)
+			time_unit = "emp ";
+		else
+			time_unit = " .";
+		for (int k = 0; k < time_chart.state_array[i].duration; ++k)
+			output << time_unit;
+	}
+	output << std::endl << "X ";
+	for (int i = 0; i < time_chart.real_array_size; ++i){
+		if (time_chart.state_array[i].value == -1)
+			time_unit = "_.";
+		else if (time_chart.state_array[i].value == -2)
+			time_unit = "emp ";
+		else
+			time_unit = " .";
+		for (int k = 0; k < time_chart.state_array[i].duration; ++k)
+			output << time_unit;
+	}
+	output << std::endl;
+	return output;
+}
+
+TimeChart & TimeChart:: operator +=(const TimeChart &additional_tc){ //???? если может в один то в один
+	if ((real_array_size + additional_tc.real_array_size) > state_array_size)
+		throw (std::exception("not enough memory for concatenation"));
+	else{
+		int add_index = 0, i=0;
+		if (state_array[real_array_size-1].value == additional_tc.state_array[0].value
+			&& (state_array[real_array_size - 1].duration + additional_tc.state_array[0].duration) <= SignalStateNameSpace::MAX_DURATION){
+			state_array[real_array_size-1].duration += additional_tc.state_array[0].duration;
+			add_index = 1;
+			i = real_array_size;
+			real_array_size -= 1;
+		}
+		else{
+			int add_index = 0;
+			i = real_array_size;
+		}
+
+		for (; add_index < additional_tc.real_array_size; ++i){
+			state_array[i] = additional_tc.state_array[add_index];
+			++add_index;
+		}
+	}
+	real_array_size += additional_tc.real_array_size;
+	return *this;
+}
+
+TimeChart & TimeChart:: operator () (const TimeChart &additional_tc, int time){//оставлять конец
+	int t = 0, i = 0;
+	if (time > (state_array_size*SignalStateNameSpace::MAX_DURATION))
+		throw(std::exception("time axis exceeding"));
+	while (t < time){
+		t += state_array[i].duration;
+		++i;
+	}
+		
+	int real_dur = (*this).get_real_duration();
+	state_array[i - 1].duration -= (t - time);   //находим с какого элемента начинаем заменять
+
+	int add_duration = additional_tc.get_real_duration();
+	
+	if ((time + add_duration) < real_dur){   //находим на каком элементе прекращается замена
+		int last_state_signals = 0;
+		int k = real_array_size-1;
+		int time_back = real_dur;
+		for (; time_back > (time + add_duration); time_back -= state_array[k].duration){
+			++last_state_signals;
+			--k;
+		}
+		int last_time_cut = time + add_duration - time_back;
+		int first_state_signals = i;
+		if ((first_state_signals + additional_tc.real_array_size + last_state_signals) <= state_array_size){
+			TimeChart first_part, last_part;
+			for (int i = 0; i < first_state_signals; ++i){
+				first_part.state_array[i] = state_array[i];
+			}
+			first_part.real_array_size = first_state_signals;
+			int k = real_array_size - last_state_signals;
+			for (int i = 0; i < last_state_signals; ++i){
+				last_part.state_array[i] = state_array[k];
+			}
+			last_part.real_array_size = last_state_signals;
+			last_part.state_array[0].duration -= (last_time_cut);
+			*this = first_part;
+			*this += additional_tc;
+			*this += last_part;
+		}
+		else
+			throw(std::exception("not enough memory for operation"));
+	}
+	else{
+		real_array_size = i;
+		*this += additional_tc;
+	}
+	return *this;
+}
+
+TimeChart & TimeChart:: operator *= (unsigned n){
+	if (n == 0)
+		throw (std::exception("power mustn't be equal to zero"));
+	TimeChart temp = *this;
+	for (int i = n-1; i > 0; --i){
+		*this += temp;
+	}
+	return *this;
+}
+
+TimeChart & TimeChart:: operator >>= (int time){
+	if (time <= 0)
+		throw (std::exception("time must be positive"));
+	TimeChart new_tc(SignalStateNameSpace::EMPTY, time);
+	new_tc += *this;
+	*this = new_tc;
+	return *this;
+}
+
+TimeChart TimeChart:: operator << (int time) const{//
+	if (time<=0)
+		throw (std::exception("time must be positive"));
+	if (state_array[0].value != SignalStateNameSpace::EMPTY || state_array[0].duration<time)
+		throw (std::exception("time chart can't be shifted in the negative field of time axis"));
+	else{
+		TimeChart new_tc;
+		new_tc.real_array_size = real_array_size;
+		for (int i = 0; i < real_array_size; ++i)
+			new_tc.state_array[i] = state_array[i];
+		new_tc.state_array[0].duration -= time;
+		return new_tc;
+	}
+}
+
+int checkIntString(char buffer[]){
+	int symbol = 0;
+	for (int i = 0; i < strlen(buffer + 1); ++i){
+		symbol = buffer[i];
+		if (symbol<48 || symbol>57)
+			return 0;
+	}
+	return 1;
+}
+
+
