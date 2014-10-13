@@ -1,0 +1,50 @@
+#pragma once
+#define _CRT_SECURE_NO_WARNINGS
+#include <iostream>
+
+namespace SignalStateNameSpace{
+	const int X = -1;
+	const int EMPTY = -2;
+	const int MAX_DURATION = 10;
+}
+
+typedef struct SignalState{
+	int value, duration; 
+	SignalState(int val = SignalStateNameSpace::EMPTY, int dur = SignalStateNameSpace::MAX_DURATION) : value(val), duration(dur){}; //инициализирующий
+}SignalState;
+
+
+class TimeChart
+{
+private:
+	static const int state_array_size = 10;
+	SignalState state_array[state_array_size];
+	int real_array_size;
+public:
+	
+	TimeChart();//пустой конструктор 
+	TimeChart(const int);
+	TimeChart(const int, int);
+	TimeChart(const char *ASCIIstring);
+
+	int get_maximum_duration() const;
+	int get_real_duration() const;
+	int get_real_array_size() const;
+
+
+	friend std::istream & operator >>(std::istream &, TimeChart &);
+	friend std::ostream & operator <<(std::ostream &, const TimeChart &);
+
+	TimeChart & operator += (const TimeChart &);
+	TimeChart & operator () (const TimeChart &, const int);
+	TimeChart & operator *= (unsigned);
+	TimeChart & operator >>= (int);
+	TimeChart operator << (int) const;
+
+	
+	
+};
+
+int checkIntString(char[30]);
+
+
